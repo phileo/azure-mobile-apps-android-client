@@ -102,11 +102,11 @@ public class MobileServiceClient {
      */
     private static final String CUSTOM_API_URL = "api/";
 
+    private static final char Slash = '/';
     /**
      * Chrome Custom Tabs Login methods
      */
     private CustomTabsLoginManager mCustomTabsLoginManager;
-
     /**
      * LoginManager used for login methods
      */
@@ -143,89 +143,14 @@ public class MobileServiceClient {
      * MobileServicePush used for push notifications
      */
     private MobileServicePush mPush;
-
     /*
     *  prefix for login endpoints. If not set defaults to /.auth/login
     */
     private String mLoginUriPrefix;
-
     /*
     *    Alternate Host URI for login
     */
     private URL mAlternateLoginHost;
-
-    /*
-     *  returns the Alternate Host URI for login
-     */
-    public URL getAlternateLoginHost() {
-        return mAlternateLoginHost;
-    }
-
-    private static URL normalizeUrl(URL appUrl) {
-        URL normalizedAppURL = appUrl;
-
-        if (normalizedAppURL.getPath().isEmpty()) {
-            try {
-                normalizedAppURL = new URL(appUrl.toString() + "/");
-            } catch (MalformedURLException e) {
-                // This exception won't happen, since it's just adding a
-                // trailing "/" to a valid URL
-            }
-        }
-        return normalizedAppURL;
-    }
-
-    /**
-     * Sets the Alternate Host URI for login
-     *
-     * @param alternateLoginHost Alternate Host URI for login
-     */
-    public void setAlternateLoginHost(URL alternateLoginHost) {
-        if (alternateLoginHost == null) {
-            mAlternateLoginHost = mAppUrl;
-        } else if (alternateLoginHost.getProtocol().toUpperCase().equals(HttpConstants.HttpsProtocol) && (alternateLoginHost.getPath().length() == 0 || alternateLoginHost.getPath().equals(Character.toString(Slash)))) {
-            mAlternateLoginHost = normalizeUrl(alternateLoginHost);
-        } else {
-            throw new IllegalArgumentException(String.format("%s is invalid.AlternateLoginHost must be a valid https URI with hostname only", alternateLoginHost.toString()));
-        }
-    }
-
-    /*
-     *  returns the prefix for login endpoints. If not set defaults to /.auth/login
-     */
-    public String getLoginUriPrefix() {
-        return mLoginUriPrefix;
-    }
-
-    /**
-     * Sets the prefix for login endpoints
-     *
-     * @param loginUriPrefix prefix for login endpoints
-     */
-    public void setLoginUriPrefix(String loginUriPrefix) {
-        if (loginUriPrefix == null) {
-            return;
-        }
-        mLoginUriPrefix = AddLeadingSlash(loginUriPrefix);
-    }
-
-    private static final char Slash = '/';
-
-    /*
-        Adds Leading slash to the string if not present
-    */
-    private static String AddLeadingSlash(String uri) {
-        if (uri == null) {
-            throw new IllegalArgumentException("uri");
-        }
-
-        if (!uri.startsWith(Character.toString(Slash))) {
-            uri = Slash + uri;
-        }
-
-        return uri;
-    }
-
     /**
      * MobileServiceSyncContext used for synchronization between local and
      * remote databases.
@@ -285,6 +210,35 @@ public class MobileServiceClient {
         initialize(appUrl, null, gsonBuilder, context, new OkHttpClientFactoryImpl(), null, null);
     }
 
+    private static URL normalizeUrl(URL appUrl) {
+        URL normalizedAppURL = appUrl;
+
+        if (normalizedAppURL.getPath().isEmpty()) {
+            try {
+                normalizedAppURL = new URL(appUrl.toString() + "/");
+            } catch (MalformedURLException e) {
+                // This exception won't happen, since it's just adding a
+                // trailing "/" to a valid URL
+            }
+        }
+        return normalizedAppURL;
+    }
+
+    /*
+        Adds Leading slash to the string if not present
+    */
+    private static String AddLeadingSlash(String uri) {
+        if (uri == null) {
+            throw new IllegalArgumentException("uri");
+        }
+
+        if (!uri.startsWith(Character.toString(Slash))) {
+            uri = Slash + uri;
+        }
+
+        return uri;
+    }
+
     /**
      * Creates a GsonBuilder with custom serializers to use with Microsoft Azure
      * Mobile Services
@@ -306,6 +260,47 @@ public class MobileServiceClient {
         return gsonBuilder;
     }
 
+    /*
+     *  returns the Alternate Host URI for login
+     */
+    public URL getAlternateLoginHost() {
+        return mAlternateLoginHost;
+    }
+
+    /**
+     * Sets the Alternate Host URI for login
+     *
+     * @param alternateLoginHost Alternate Host URI for login
+     */
+    public void setAlternateLoginHost(URL alternateLoginHost) {
+        if (alternateLoginHost == null) {
+            mAlternateLoginHost = mAppUrl;
+        } else if (alternateLoginHost.getProtocol().toUpperCase().equals(HttpConstants.HttpsProtocol) && (alternateLoginHost.getPath().length() == 0 || alternateLoginHost.getPath().equals(Character.toString(Slash)))) {
+            mAlternateLoginHost = normalizeUrl(alternateLoginHost);
+        } else {
+            throw new IllegalArgumentException(String.format("%s is invalid.AlternateLoginHost must be a valid https URI with hostname only", alternateLoginHost.toString()));
+        }
+    }
+
+    /*
+     *  returns the prefix for login endpoints. If not set defaults to /.auth/login
+     */
+    public String getLoginUriPrefix() {
+        return mLoginUriPrefix;
+    }
+
+    /**
+     * Sets the prefix for login endpoints
+     *
+     * @param loginUriPrefix prefix for login endpoints
+     */
+    public void setLoginUriPrefix(String loginUriPrefix) {
+        if (loginUriPrefix == null) {
+            return;
+        }
+        mLoginUriPrefix = AddLeadingSlash(loginUriPrefix);
+    }
+
     /**
      * Return Custom Tabs login manager
      */
@@ -315,6 +310,7 @@ public class MobileServiceClient {
 
     /**
      * Refreshes access token with the identity provider for the logged in user.
+     *
      * @return Refreshed Mobile Service user
      */
     public ListenableFuture<MobileServiceUser> refreshUser() {
@@ -323,6 +319,7 @@ public class MobileServiceClient {
 
     /**
      * Refreshes access token with the identity provider for the logged in user.
+     *
      * @param callback The callback to invoke when the authentication process finishes
      */
     public void refreshUser(final UserAuthenticationCallback callback) {
@@ -333,8 +330,8 @@ public class MobileServiceClient {
      * Invokes an interactive authentication process using the specified
      * Authentication Provider
      *
-     * @param provider The provider used for the authentication process
-     * @param uriScheme The URL scheme of the application
+     * @param provider        The provider used for the authentication process
+     * @param uriScheme       The URL scheme of the application
      * @param authRequestCode The request code that will be returned in onActivityResult() when
      *                        the login flow completes and activity exits
      */
@@ -346,8 +343,8 @@ public class MobileServiceClient {
      * Invokes an interactive authentication process using the specified
      * Authentication Provider
      *
-     * @param provider The provider used for the authentication process
-     * @param uriScheme The URL scheme of the application
+     * @param provider        The provider used for the authentication process
+     * @param uriScheme       The URL scheme of the application
      * @param authRequestCode The request code that will be returned in onActivityResult() when
      *                        the login flow completes and activity exits
      */
@@ -359,11 +356,11 @@ public class MobileServiceClient {
      * Invokes an interactive authentication process using the specified
      * Authentication Provider
      *
-     * @param provider The provider used for the authentication process
-     * @param uriScheme The URL scheme of the application
+     * @param provider        The provider used for the authentication process
+     * @param uriScheme       The URL scheme of the application
      * @param authRequestCode The request code that will be returned in onActivityResult() when
      *                        the login flow completes and activity exits
-     * @param parameters Additional parameters for the authentication process
+     * @param parameters      Additional parameters for the authentication process
      */
     public void login(String provider, String uriScheme, int authRequestCode, HashMap<String, String> parameters) {
         this.mCustomTabsLoginManager.authenticate(provider, uriScheme, parameters, mContext, authRequestCode);
@@ -373,11 +370,11 @@ public class MobileServiceClient {
      * Invokes an interactive authentication process using the specified
      * Authentication Provider
      *
-     * @param provider The provider used for the authentication process
-     * @param uriScheme The URL scheme of the application
+     * @param provider        The provider used for the authentication process
+     * @param uriScheme       The URL scheme of the application
      * @param authRequestCode The request code that will be returned in onActivityResult() when
      *                        the login flow completes and activity exits
-     * @param parameters Additional parameters for the authentication process
+     * @param parameters      Additional parameters for the authentication process
      */
     public void login(MobileServiceAuthenticationProvider provider, String uriScheme, int authRequestCode, HashMap<String, String> parameters) {
         this.mCustomTabsLoginManager.authenticate(provider.toString(), uriScheme, parameters, mContext, authRequestCode);
@@ -575,7 +572,7 @@ public class MobileServiceClient {
      * @param oAuthToken A Json object representing the oAuth token used for
      *                   authentication
      * @param callback   Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #login( com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, com.google.gson.JsonObject oAuthToken)} instead
+     * @deprecated use {@link #login(com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, com.google.gson.JsonObject oAuthToken)} instead
      */
     public void login(MobileServiceAuthenticationProvider provider, JsonObject oAuthToken, UserAuthenticationCallback callback) {
         login(provider, oAuthToken, null, callback);
@@ -591,7 +588,7 @@ public class MobileServiceClient {
      *                   authentication
      * @param parameters Additional parameters for the authentication process
      * @param callback   Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #login( com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, com.google.gson.JsonObject oAuthToken)} instead
+     * @deprecated use {@link #login(com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, com.google.gson.JsonObject oAuthToken)} instead
      */
     public void login(MobileServiceAuthenticationProvider provider, JsonObject oAuthToken, HashMap<String, String> parameters, UserAuthenticationCallback callback) {
         login(provider.toString(), oAuthToken, parameters, callback);
@@ -696,7 +693,7 @@ public class MobileServiceClient {
      * @param provider   The provider used for the authentication process
      * @param oAuthToken The oAuth token used for authentication
      * @param callback   Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #login( com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, String oAuthToken)} instead
+     * @deprecated use {@link #login(com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, String oAuthToken)} instead
      */
     public void login(MobileServiceAuthenticationProvider provider, String oAuthToken, UserAuthenticationCallback callback) {
         login(provider, oAuthToken, null, callback);
@@ -710,7 +707,7 @@ public class MobileServiceClient {
      * @param oAuthToken The oAuth token used for authentication
      * @param parameters Additional parameters for the authentication process
      * @param callback   Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #login( com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, String oAuthToken)} instead
+     * @deprecated use {@link #login(com.microsoft.windowsazure.mobileservices.authentication.MobileServiceAuthenticationProvider provider, String oAuthToken)} instead
      */
     public void login(MobileServiceAuthenticationProvider provider, String oAuthToken, HashMap<String, String> parameters, UserAuthenticationCallback callback) {
         login(provider.toString(), oAuthToken, parameters, callback);
@@ -824,7 +821,7 @@ public class MobileServiceClient {
      *
      * @param activity The activity that triggered the authentication
      * @param callback Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #loginWithGoogleAccount( android.app.Activity activity)} instead
+     * @deprecated use {@link #loginWithGoogleAccount(android.app.Activity activity)} instead
      */
     public void loginWithGoogleAccount(Activity activity, final UserAuthenticationCallback callback) {
         loginWithGoogleAccount(activity, GOOGLE_USER_INFO_SCOPE, callback);
@@ -858,7 +855,7 @@ public class MobileServiceClient {
      * @param activity The activity that triggered the authentication
      * @param scopes   The scopes used as authentication token type for login
      * @param callback Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #loginWithGoogleAccount( android.app.Activity activity, String scopes)} instead
+     * @deprecated use {@link #loginWithGoogleAccount(android.app.Activity activity, String scopes)} instead
      */
     public void loginWithGoogleAccount(Activity activity, String scopes, final UserAuthenticationCallback callback) {
         ListenableFuture<MobileServiceUser> loginFuture = loginWithGoogleAccount(activity, scopes);
@@ -898,7 +895,7 @@ public class MobileServiceClient {
      * @param activity The activity that triggered the authentication
      * @param account  The account used for the login operation
      * @param callback Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #loginWithGoogleAccount( android.app.Activity activity, android.accounts.Account account)} instead
+     * @deprecated use {@link #loginWithGoogleAccount(android.app.Activity activity, android.accounts.Account account)} instead
      */
     public void loginWithGoogleAccount(Activity activity, Account account, final UserAuthenticationCallback callback) {
         loginWithGoogleAccount(activity, account, GOOGLE_USER_INFO_SCOPE, callback);
@@ -977,7 +974,7 @@ public class MobileServiceClient {
      * @param account  The account used for the login operation
      * @param scopes   The scopes used as authentication token type for login
      * @param callback Callback to invoke when the authentication process finishes
-     * @deprecated use {@link #loginWithGoogleAccount( android.app.Activity activity, android.accounts.Account account, String scopes)} instead
+     * @deprecated use {@link #loginWithGoogleAccount(android.app.Activity activity, android.accounts.Account account, String scopes)} instead
      */
     public void loginWithGoogleAccount(Activity activity, Account account, String scopes, final UserAuthenticationCallback callback) {
         ListenableFuture<MobileServiceUser> loginFuture = loginWithGoogleAccount(activity, account, scopes);
@@ -1048,7 +1045,6 @@ public class MobileServiceClient {
 
     /**
      * @return a MobileServiceSyncContext instance.
-     *
      */
     public MobileServiceSyncContext getSyncContext() {
         return this.mSyncContext;
@@ -1065,9 +1061,6 @@ public class MobileServiceClient {
     }
 
     /**
-     * @return a MobileServiceJsonSyncTable instance, which provides untyped
-     * data operations for a local table.
-     *
      * @param name Table name
      * @return The MobileServiceJsonSyncTable instance
      */
@@ -1098,21 +1091,19 @@ public class MobileServiceClient {
     }
 
     /**
+     * @param clazz The class used for table name and data serialization
      * @return a MobileServiceSyncTable<E> instance, which provides strongly
      * typed data operations for a local table.
-     *
-     * @param clazz The class used for table name and data serialization
      */
     public <E> MobileServiceSyncTable<E> getSyncTable(Class<E> clazz) {
         return this.getSyncTable(clazz.getSimpleName(), clazz);
     }
 
     /**
-     * @return a MobileServiceSyncTable<E> instance, which provides strongly
-     * typed data operations for a local table.
-     *
      * @param name  Table name
      * @param clazz The class used for data serialization
+     * @return a MobileServiceSyncTable<E> instance, which provides strongly
+     * typed data operations for a local table.
      */
     public <E> MobileServiceSyncTable<E> getSyncTable(String name, Class<E> clazz) {
         validateClass(clazz);
@@ -1530,17 +1521,22 @@ public class MobileServiceClient {
         }
 
         int idPropertyCount = 0;
-        for (Field field : clazz.getDeclaredFields()) {
-            SerializedName serializedName = field.getAnnotation(SerializedName.class);
-            if (serializedName != null) {
-                if (serializedName.value().equalsIgnoreCase("id")) {
-                    idPropertyCount++;
-                }
-            } else {
-                if (field.getName().equalsIgnoreCase("id")) {
-                    idPropertyCount++;
+        Class<?> currentClass = clazz;
+        while (currentClass != null) {
+            for (Field field : currentClass.getDeclaredFields()) {
+                SerializedName serializedName = field.getAnnotation(SerializedName.class);
+                if (serializedName != null) {
+                    if (serializedName.value().equalsIgnoreCase("id")) {
+                        idPropertyCount++;
+                    }
+                } else {
+                    if (field.getName().equalsIgnoreCase("id")) {
+                        idPropertyCount++;
+                    }
                 }
             }
+
+            currentClass =  currentClass.getSuperclass();
         }
 
         if (idPropertyCount != 1) {
@@ -1599,6 +1595,7 @@ public class MobileServiceClient {
 
     /**
      * Gets the ServiceFilter. If there is no ServiceFilter, it creates and returns the service.
+     *
      * @return ServiceFilter The service filter to use with the client.
      */
     public ServiceFilter getServiceFilter() {
