@@ -68,6 +68,8 @@ import com.microsoft.windowsazure.mobileservices.table.sync.MobileServiceJsonSyn
 import com.microsoft.windowsazure.mobileservices.table.sync.MobileServiceSyncContext;
 import com.microsoft.windowsazure.mobileservices.table.sync.MobileServiceSyncTable;
 
+import net.danlew.android.joda.JodaTimeAndroid;
+
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -1638,6 +1640,8 @@ public class MobileServiceClient {
         if (context == null) {
             throw new IllegalArgumentException("Context cannot be null");
         }
+
+        JodaTimeAndroid.init(context);
 
         URL normalizedAppURL = normalizeUrl(appUrl);
         mAppUrl = normalizedAppURL;
