@@ -24,13 +24,13 @@ See the Apache Version 2.0 License for specific language governing permissions a
 package com.microsoft.windowsazure.mobileservices.table;
 
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.util.Pair;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -40,7 +40,6 @@ import com.microsoft.windowsazure.mobileservices.MobileServiceFeatures;
 import com.microsoft.windowsazure.mobileservices.http.HttpConstants;
 import com.microsoft.windowsazure.mobileservices.http.MobileServiceConnection;
 import com.microsoft.windowsazure.mobileservices.http.MobileServiceHttpClient;
-import com.microsoft.windowsazure.mobileservices.http.RequestAsyncTask;
 import com.microsoft.windowsazure.mobileservices.http.ServiceFilterRequest;
 import com.microsoft.windowsazure.mobileservices.http.ServiceFilterRequestImpl;
 import com.microsoft.windowsazure.mobileservices.http.ServiceFilterResponse;
@@ -48,13 +47,14 @@ import com.microsoft.windowsazure.mobileservices.table.query.ExecutableJsonQuery
 import com.microsoft.windowsazure.mobileservices.table.query.Query;
 import com.microsoft.windowsazure.mobileservices.table.query.QueryODataWriter;
 import com.microsoft.windowsazure.mobileservices.table.query.QueryOrder;
-import okhttp3.Headers;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+
+import okhttp3.Headers;
 
 /**
  * Represents a Mobile Service Table, Provides operations on a table using a JsonObject
@@ -171,7 +171,7 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
     /**
      * Make the request to the mobile service witht the query URL
      *
-     * @param url The query url
+     * @param url      The query url
      * @param features The features used in the request
      */
     private ListenableFuture<JsonElement> executeUrlQuery(final String url, EnumSet<MobileServiceFeatures> features) {
@@ -190,7 +190,7 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
 
                 String nextLinkHeaderValue = getHeaderValue(result.second.getHeaders(), "Link");
 
-                if (nextLinkHeaderValue != null){
+                if (nextLinkHeaderValue != null) {
 
                     JsonObject jsonResult = new JsonObject();
 
@@ -201,8 +201,7 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
 
                     future.set(jsonResult);
 
-                }
-                else {
+                } else {
                     future.set(result.first);
                 }
             }
@@ -918,7 +917,7 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
                     future.set(null);
                 } else {
 
-                    if (content != null && !content.isEmpty()){
+                    if (content != null && !content.isEmpty()) {
                         JsonElement json = new JsonParser().parse(content);
                         future.set(json.isJsonObject()
                                 ? Pair.create(json.getAsJsonObject(), result)
@@ -943,19 +942,34 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
     private ListenableFuture<Pair<JsonElement, ServiceFilterResponse>> executeGetRecords(final String url, EnumSet<MobileServiceFeatures> features) {
         final SettableFuture<Pair<JsonElement, ServiceFilterResponse>> future = SettableFuture.create();
 
-        ServiceFilterRequest request = ServiceFilterRequestImpl.get(mClient.getOkHttpClientFactory(), url);
+        final ServiceFilterRequest request = ServiceFilterRequestImpl.get(mClient.getOkHttpClientFactory(), url);
 
         String featuresHeader = MobileServiceFeatures.featuresToString(features);
         if (featuresHeader != null) {
             request.addHeader(MobileServiceHttpClient.X_ZUMO_FEATURES, featuresHeader);
         }
 
-        MobileServiceConnection conn = mClient.createConnection();
+        final MobileServiceConnection conn = mClient.createConnection();
         // Create AsyncTask to execute the request and parse the results
-        new RequestAsyncTask(request, conn) {
+
+        new AsyncTask<Void, Void, Pair<JsonElement, ServiceFilterResponse>>() {
+            private MobileServiceException exception = null;
+
             @Override
-            protected void onPostExecute(ServiceFilterResponse response) {
-                if (mTaskException == null && response != null) {
+            protected Pair<JsonElement, ServiceFilterResponse> doInBackground(Void... voids) {
+                ServiceFilterResponse response = null;
+                try {
+                    response = conn.start(request).get();
+
+                } catch (Exception e) {
+                    if (e.getCause() instanceof MobileServiceException) {
+                        exception = (MobileServiceException) e.getCause();
+                    } else {
+                        exception = new MobileServiceException(e);
+                    }
+                }
+
+                if (exception == null && response != null) {
                     JsonElement results = null;
 
                     try {
@@ -965,15 +979,25 @@ public final class MobileServiceJsonTable extends MobileServiceTableBase {
 
                         results = json;
 
-                        future.set(Pair.create(results, response));
+                        return Pair.create(results, response);
+
                     } catch (Exception e) {
-                        future.setException(new MobileServiceException("Error while retrieving data from response.", e, response));
+                        exception = new MobileServiceException("Error while retrieving data from response.", e, response);
                     }
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Pair<JsonElement, ServiceFilterResponse> pair) {
+                if (pair != null) {
+                    future.set(pair);
                 } else {
-                    future.setException(mTaskException);
+                    future.setException(exception);
                 }
             }
-        }.executeTask();
+        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 
         return future;
     }

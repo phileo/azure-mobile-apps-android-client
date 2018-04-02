@@ -14,11 +14,10 @@ import com.microsoft.windowsazure.mobileservices.table.sync.localstore.ColumnDat
 import com.microsoft.windowsazure.mobileservices.table.sync.localstore.MobileServiceLocalStore;
 import com.microsoft.windowsazure.mobileservices.table.sync.localstore.MobileServiceLocalStoreException;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import org.joda.time.DateTime;
+
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TimeZone;
 
 /**
  * Created by marianosanchez on 11/3/14.
@@ -30,6 +29,7 @@ public class IncrementalPullStrategy extends PullStrategy {
     private MobileServiceLocalStore mStore;
     private DateTimeOffset maxUpdatedAt;
     private DateTimeOffset deltaToken;
+    private Boolean hasPreviousResults = true;
     private String queryId;
     private Query originalQuery;
 
@@ -60,6 +60,8 @@ public class IncrementalPullStrategy extends PullStrategy {
 
             originalQuery = query;
 
+            hasPreviousResults = false;
+
             results = mStore.read(
                     QueryOperations.tableName(INCREMENTAL_PULL_STRATEGY_TABLE)
                             .field("id")
@@ -88,9 +90,15 @@ public class IncrementalPullStrategy extends PullStrategy {
 
     public void onResultsProcessed(JsonArray elements) {
 
-        if (elements.size() <= 0) {
+        if (elements.size() == 0) {
+            if (maxUpdatedAt != null && hasPreviousResults) {
+                saveMaxUpdatedDate(new DateTime(maxUpdatedAt.getTime() + 1).toString());
+            }
+
             return;
         }
+
+        hasPreviousResults = true;
 
         JsonObject lastElement = elements.get(elements.size() - 1).getAsJsonObject();
 
@@ -105,8 +113,9 @@ public class IncrementalPullStrategy extends PullStrategy {
 
         if (deltaToken == null || maxUpdatedAt.after(deltaToken)) {
 
-            if (lastElementCount == 0)
+            if (lastElementCount == 0) {
                 return false;
+            }
 
             deltaToken = maxUpdatedAt;
 
@@ -152,7 +161,7 @@ public class IncrementalPullStrategy extends PullStrategy {
             if (this.query.getQueryNode() != null) {
                 this.query = this.query.and(filterQuery);
             } else {
-                this.query = filterQuery;
+                this.query = filterQuery.top(this.query.getTop());
             }
         }
 
@@ -172,21 +181,7 @@ public class IncrementalPullStrategy extends PullStrategy {
             return null;
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-        try {
-            return new DateTimeOffset(sdf.parse(stringValue));
-        } catch (ParseException e) {
-            try {
-                // Didn't work, trying without ms
-                sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-                return new DateTimeOffset(sdf.parse(stringValue));
-            } catch (ParseException ex) {
-                return null;
-            }
-        }
+        DateTime dateTime = new DateTime(stringValue);
+        return new DateTimeOffset(dateTime.toDate());
     }
 }

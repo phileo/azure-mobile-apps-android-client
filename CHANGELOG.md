@@ -1,5 +1,13 @@
 # Azure Mobile Services Android SDK Change Log
 
+### Android SDK: Version 4.1.0
+- Support for Android 8.1
+- Update libraries
+- [#94](https://github.com/Azure/azure-mobile-apps-android-client/issues/94) Allow dto inheritance
+
+### Android SDK: Version 4.0.0
+- [#121](https://github.com/Azure/azure-mobile-apps-android-client/issues/121) Added OkHttp 3 support, this is a breaking change
+
 ### Android SDK: Version 3.4.0
 - Support for Android 8
 - [#116](https://github.com/Azure/azure-mobile-apps-android-client/pull/116) Allow to specify PullStrategy top higher than 50
